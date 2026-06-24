@@ -132,7 +132,30 @@
   .secHead h2{font-size:22px;font-weight:800}
   .secHead span{font-size:12.5px;color:var(--mut)}
   .matches{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-top:14px}
-  .mc{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .mc{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;cursor:pointer;transition:.2s}
+  .mc:hover{transform:translateY(-3px);border-color:var(--acc2);box-shadow:0 14px 40px #0008}
+  .mhint{margin-top:10px;font-size:11px;color:var(--acc2);text-align:right;opacity:.75;font-weight:600}
+  /* match modal */
+  .mvs{display:flex;align-items:center;gap:6px}
+  .mvs-x{display:none}
+  .cmp{display:grid;grid-template-columns:1fr 96px 1fr;align-items:center;gap:8px;margin:8px 0;font-size:12px}
+  .cmp .cat{text-align:center;color:var(--mut);font-size:11px}
+  .cmp .va,.cmp .vb{display:flex;align-items:center;gap:7px}
+  .cmp .va{justify-content:flex-end}
+  .cmp .barA,.cmp .barB{height:7px;border-radius:6px;background:#0a1222;flex:1;overflow:hidden;min-width:40px}
+  .cmp .barA i{display:block;height:100%;background:var(--acc2);margin-left:auto}
+  .cmp .barB i{display:block;height:100%;background:var(--acc)}
+  .cmp b{min-width:34px;text-align:center}
+  .mpls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mpl{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .mpl-h{font-size:13px;margin-bottom:7px;display:flex;align-items:center;gap:6px}
+  .mpl-r{font-size:12.5px;padding:3px 0;color:#cdd8f2}
+  .mpl-r .rt{color:var(--gold);font-weight:800;font-size:12px}
+  .mpl-r .pp{color:var(--acc2);font-size:10.5px;text-transform:uppercase;letter-spacing:.4px}
+  ul.factors{list-style:none;font-size:13.5px;color:#cdd8f2}
+  ul.factors li{padding:6px 0 6px 20px;position:relative;border-bottom:1px solid var(--line)}
+  ul.factors li:last-child{border-bottom:none}
+  ul.factors li::before{content:"▹";position:absolute;left:0;color:var(--acc)}
   .mc .mtop{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);margin-bottom:12px}
   .mc .mtop .stg{color:var(--acc2);font-weight:700}
   .mc .teams{display:flex;align-items:center;gap:8px}
@@ -174,14 +197,14 @@
 
   <div class="podium" id="podium"></div>
 
-  <div class="secHead">
+  <div class="secHead" id="teamsHead"><h2>📋 Все команды</h2><span>отсортированы по шансам на титул · нажми на команду для разбора</span></div>
+  <div class="grid" id="grid"></div>
+
+  <div class="secHead" id="matchesHead">
     <h2>⚽ Ближайшие матчи</h2>
-    <span id="matchSub">реальные матчи группового этапа · 24–27 июня 2026 · прогноз модели (П1 / ничья / П2)</span>
+    <span id="matchSub">реальные матчи группового этапа · 24–27 июня 2026 · нажми на матч для полного разбора</span>
   </div>
   <div class="matches" id="matches"></div>
-
-  <div class="secHead"><h2>📋 Все команды</h2><span>отсортированы по шансам на титул</span></div>
-  <div class="grid" id="grid"></div>
 
   <div class="disc">
     ⚠️ <b>Дисклеймер:</b> расписание матчей — реальное (заключительные туры группового этапа ЧМ-2026, 24–27 июня 2026).
@@ -507,9 +530,9 @@ function whyText(m,p){
 
 const matchesEl=document.getElementById('matches');
 function renderMatches(){
-  matchesEl.innerHTML=MATCHES.map(m=>{
+  matchesEl.innerHTML=MATCHES.map((m,i)=>{
     const p=predict(m);
-    return `<div class="mc">
+    return `<div class="mc" onclick="openMatch(${i})">
       <div class="mtop"><span class="stg">Группа ${m.g} · групповой этап</span><span>${m.date} · ${m.venue}</span></div>
       <div class="teams">
         <div class="side">${flagImg(m.a,30)}<div class="nn">${p.A.name}</div></div>
@@ -524,8 +547,97 @@ function renderMatches(){
       </div>
       <div class="tlabels"><span>П1 ${p.A.name}</span><span>ничья</span><span>П2 ${p.B.name}</span></div>
       <div class="why">${whyText(m,p)}</div>
+      <div class="mhint">→ нажми для полного разбора</div>
     </div>`;
   }).join('');
+}
+
+/* ===== ПОЛНЫЙ РАЗБОР МАТЧА ===== */
+function isDetailed(code){ return !!TEAMS.find(t=>t.id===code); }
+function teamObj(code){ return TEAMS.find(t=>t.id===code); }
+
+function openMatch(i){
+  const m=MATCHES[i], p=predict(m);
+  const A=p.A, B=p.B, tA=teamObj(m.a), tB=teamObj(m.b);
+  const fav = p.pa>=p.pb ? {n:A,o:B,code:m.a,pw:p.pa} : {n:B,o:A,code:m.b,pw:p.pb};
+  const dog = p.pa>=p.pb ? {n:B,code:m.b} : {n:A,code:m.a};
+  const gap = Math.abs(A.elo-B.elo);
+  const xpA=((3*p.pa+p.pd)/100).toFixed(2), xpB=((3*p.pb+p.pd)/100).toFixed(2);
+
+  // сравнение силы
+  const eloMax=Math.max(A.elo,B.elo);
+  let cmp=`<div class="cmp">
+      <div class="va"><b style="color:${A.elo>=B.elo?'var(--txt)':'var(--mut)'}">${A.elo}</b><div class="barA"><i style="width:${A.elo/eloMax*100}%"></i></div></div>
+      <div class="cat">рейтинг Эло</div>
+      <div class="vb"><div class="barB"><i style="width:${B.elo/eloMax*100}%"></i></div><b style="color:${B.elo>=A.elo?'var(--txt)':'var(--mut)'}">${B.elo}</b></div>
+    </div>`;
+  if(tA&&tB){
+    const cats=['Атака','Оборона','Полузащита','Глубина','Тренер','Опыт'];
+    cmp+=cats.map(c=>{const a=tA.ratings[c],b=tB.ratings[c];
+      return `<div class="cmp">
+        <div class="va"><b style="color:${a>=b?'var(--acc2)':'var(--mut)'}">${a}</b><div class="barA"><i style="width:${a}%"></i></div></div>
+        <div class="cat">${c}</div>
+        <div class="vb"><div class="barB"><i style="width:${b}%"></i></div><b style="color:${b>=a?'var(--acc)':'var(--mut)'}">${b}</b></div>
+      </div>`;}).join('');
+  }
+
+  // ключевые игроки (для детально описанных команд)
+  let playersBlock='';
+  [ [tA,A], [tB,B] ].forEach(([t,nat])=>{
+    if(t){ playersBlock+=`<div class="mpl"><div class="mpl-h">${flagImg(t.id,20)} <b>${nat.name}</b></div>`+
+      t.players.slice(0,3).map(pl=>`<div class="mpl-r"><span class="rt">${pl.r}</span> <b>${pl.n}</b> <span class="pp">${pl.p}</span></div>`).join('')+`</div>`; }
+  });
+  if(playersBlock) playersBlock=`<div class="secT">⭐ Ключевые игроки</div><div class="mpls">${playersBlock}</div>`;
+
+  // ключевые факторы
+  const factors=[];
+  if(gap<45) factors.push(`Силы практически равны (Эло ${A.elo} vs ${B.elo}) — матч может решить один эпизод или стандарт.`);
+  else factors.push(`${fav.n.name} превосходит соперника по рейтингу на ${gap} пункта Эло — фаворит по модели.`);
+  if(m.host==='a'||m.host==='b'){ const h = m.host==='a'?A:B; factors.push(`Фактор своего поля: ${h.name} играет дома — поддержка трибун и привычные условия добавляют шансов.`); }
+  if(p.pd>=24) factors.push(`Высокая вероятность ничьей (${p.pd}%) — обе команды могут сыграть осторожно, особенно если очко устраивает.`);
+  if(tA&&tA.strengths) factors.push(`Козырь ${A.name}: ${tA.strengths[0].toLowerCase()}.`);
+  if(tB&&tB.strengths) factors.push(`Козырь ${B.name}: ${tB.strengths[0].toLowerCase()}.`);
+  if(tA&&tA.players) factors.push(`Может решить: ${tA.players[0].n} (${A.name}).`);
+  if(tB&&tB.players) factors.push(`Может решить: ${tB.players[0].n} (${B.name}).`);
+  factors.push(`Ожидаемые очки в этом туре: ${A.name} — ${xpA}, ${B.name} — ${xpB} (из 3).`);
+
+  const verdict = gap<45
+    ? `Модель не выделяет явного фаворита. Наиболее вероятен близкий, равный матч; ничья — реальный исход. Расчётный счёт ${p.score}.`
+    : `Модель отдаёт предпочтение ${fav.n.name} (${fav.pw}% на победу). ${dog.n.name} способны зацепиться за счёт дисциплины и контратак, но для этого нужен почти идеальный матч. Расчётный счёт ${p.score}.`;
+
+  document.getElementById('modal').innerHTML=`
+    <div class="mhead">
+      <div class="mvs">${flagImg(m.a,40)}<span class="mvs-x">${A.elo>=B.elo?'⌃':''}</span></div>
+      <div style="text-align:center;flex:1">
+        <h2 style="font-size:20px">${A.name} <span style="color:var(--mut)">—</span> ${B.name}</h2>
+        <div class="tgroup">Группа ${m.g} · ${m.date} · ${m.venue}</div>
+      </div>
+      <div class="mvs">${flagImg(m.b,40)}</div>
+      <button class="close" onclick="closeOv()">×</button>
+    </div>
+
+    <div class="secT">📊 Прогноз исхода</div>
+    <div class="triple" style="height:38px;font-size:13px">
+      <div class="w1" style="flex:${p.pa}">${p.pa}%</div>
+      <div class="dr" style="flex:${p.pd}">${p.pd}%</div>
+      <div class="w2" style="flex:${p.pb}">${p.pb}%</div>
+    </div>
+    <div class="tlabels"><span>П1 ${A.name}</span><span>ничья</span><span>П2 ${B.name}</span></div>
+    <div class="score" style="margin-top:12px;text-align:center">вероятный счёт <b>${p.score}</b> · ожидаемые очки <b style="color:var(--txt)">${A.name} ${xpA}</b> / <b style="color:var(--txt)">${B.name} ${xpB}</b></div>
+
+    <div class="secT">⚖️ Сравнение сил</div>
+    ${cmp}
+
+    ${playersBlock}
+
+    <div class="secT">🔑 Ключевые факторы</div>
+    <ul class="factors">${factors.map(f=>`<li>${f}</li>`).join('')}</ul>
+
+    <div class="secT">🧠 Вердикт модели</div>
+    <p class="desc">${verdict}</p>
+    <p class="desc" style="color:var(--mut);margin-top:6px;font-size:12.5px">⚠️ Прогноз построен на рейтинге Эло и силе состава, а не гарантия результата.</p>
+  `;
+  document.getElementById('ov').classList.add('on');
 }
 
 /* ===== RENDER ===== */
@@ -637,6 +749,8 @@ document.getElementById('filters').addEventListener('click',e=>{
   if(!e.target.classList.contains('chip'))return;
   document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
   e.target.classList.add('on'); activeF=e.target.dataset.f; renderGrid();
+  // показать отфильтрованные команды сверху, а не где-то внизу
+  document.getElementById('teamsHead').scrollIntoView({behavior:'smooth',block:'start'});
 });
 document.getElementById('search').addEventListener('input',e=>{q=e.target.value.toLowerCase().trim();renderGrid();});
 
