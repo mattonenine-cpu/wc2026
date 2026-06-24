@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ЧМ-2026 · Аналитика и прогнозы</title>
+<style>
+  :root{
+    --bg:#070b14; --bg2:#0d1424; --card:#111a2e; --card2:#16213a;
+    --line:#1f2d4a; --txt:#e8eefc; --mut:#8a9bc4; --acc:#3ddc97;
+    --acc2:#4f8cff; --warn:#ffb347; --bad:#ff6b6b; --gold:#ffd45e;
+    --grad:linear-gradient(135deg,#4f8cff,#3ddc97);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+    background:radial-gradient(1200px 600px at 70% -10%,#16224080,transparent),
+               radial-gradient(900px 500px at 0% 100%,#0f3d3060,transparent),var(--bg);
+    color:var(--txt); line-height:1.5; min-height:100vh;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:28px 20px 80px}
+  header.top{text-align:center;padding:38px 0 18px}
+  .badge{display:inline-block;font-size:12px;letter-spacing:3px;text-transform:uppercase;
+    color:var(--acc);border:1px solid var(--line);padding:6px 14px;border-radius:30px;background:#0d1830}
+  h1{font-size:clamp(30px,5vw,52px);margin:16px 0 6px;font-weight:800;
+    background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{color:var(--mut);font-size:15px;max-width:640px;margin:0 auto}
+  .meta{margin-top:14px;font-size:13px;color:var(--mut)}
+  .meta b{color:var(--txt)}
+
+  /* filter bar */
+  .bar{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:30px 0 8px}
+  .chip{cursor:pointer;background:var(--card);border:1px solid var(--line);color:var(--mut);
+    padding:9px 16px;border-radius:30px;font-size:13px;font-weight:600;transition:.2s}
+  .chip:hover{border-color:var(--acc2);color:var(--txt)}
+  .chip.on{background:var(--grad);color:#06121a;border-color:transparent}
+  .search{display:block;margin:14px auto 0;max-width:420px;width:100%;background:var(--card);
+    border:1px solid var(--line);color:var(--txt);padding:11px 16px;border-radius:12px;font-size:14px;outline:none}
+  .search:focus{border-color:var(--acc2)}
+
+  /* podium */
+  .podium{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:34px 0 10px}
+  .pod{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px;text-align:center;position:relative;overflow:hidden}
+  .pod::before{content:"";position:absolute;inset:0;opacity:.12;background:var(--grad)}
+  .pod .rank{font-size:13px;color:var(--gold);font-weight:700;letter-spacing:1px}
+  .pod .flag{font-size:46px;margin:8px 0}
+  .pod .nm{font-weight:800;font-size:18px}
+  .pod .pc{font-size:34px;font-weight:900;margin-top:6px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .pod small{color:var(--mut)}
+
+  /* grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;margin-top:22px}
+  .team{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;cursor:pointer;transition:.2s;position:relative}
+  .team:hover{transform:translateY(-3px);border-color:var(--acc2);box-shadow:0 14px 40px #0008}
+  .thead{display:flex;align-items:center;gap:12px}
+  .flag{font-size:34px;line-height:1}
+  .tname{font-weight:800;font-size:18px}
+  .tgroup{font-size:12px;color:var(--mut)}
+  .tier{margin-left:auto;font-size:11px;font-weight:700;padding:4px 9px;border-radius:20px}
+  .t-fav{background:#3ddc9722;color:var(--acc)}
+  .t-dark{background:#4f8cff22;color:var(--acc2)}
+  .t-out{background:#ffb34722;color:var(--warn)}
+  .t-long{background:#ff6b6b22;color:var(--bad)}
+
+  .probrow{display:flex;justify-content:space-between;align-items:flex-end;margin:16px 0 6px}
+  .probrow .big{font-size:30px;font-weight:900}
+  .probrow .lbl{font-size:12px;color:var(--mut)}
+  .meter{height:9px;background:#0a1222;border-radius:10px;overflow:hidden}
+  .meter>i{display:block;height:100%;border-radius:10px;background:var(--grad)}
+
+  .mini{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+  .mini div{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center}
+  .mini b{display:block;font-size:16px}
+  .mini span{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.5px}
+
+  /* modal */
+  .ov{position:fixed;inset:0;background:#040711d9;backdrop-filter:blur(6px);display:none;
+    align-items:flex-start;justify-content:center;padding:40px 16px;z-index:50;overflow:auto}
+  .ov.on{display:flex}
+  .modal{background:var(--bg2);border:1px solid var(--line);border-radius:20px;max-width:820px;width:100%;padding:28px;animation:pop .25s ease}
+  @keyframes pop{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+  .mhead{display:flex;align-items:center;gap:16px;border-bottom:1px solid var(--line);padding-bottom:18px}
+  .mhead .flag{font-size:54px}
+  .mhead h2{font-size:26px}
+  .close{margin-left:auto;background:var(--card);border:1px solid var(--line);color:var(--txt);
+    width:38px;height:38px;border-radius:10px;font-size:20px;cursor:pointer}
+  .close:hover{border-color:var(--bad);color:var(--bad)}
+
+  .secT{font-size:13px;text-transform:uppercase;letter-spacing:2px;color:var(--acc);margin:22px 0 10px;font-weight:700}
+  .desc{color:#cdd8f2;font-size:14.5px}
+
+  .bars .b{margin:10px 0}
+  .bars .b .l{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px}
+  .bars .b .l span:last-child{color:var(--mut)}
+  .track{height:8px;background:#0a1222;border-radius:8px;overflow:hidden}
+  .track>i{display:block;height:100%;border-radius:8px}
+
+  .players{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+  .pl{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px}
+  .pl .pn{font-weight:700;font-size:14.5px}
+  .pl .pp{font-size:11px;color:var(--acc2);text-transform:uppercase;letter-spacing:.5px;margin:2px 0 6px}
+  .pl .pd{font-size:12.5px;color:var(--mut)}
+  .pl .rt{float:right;font-size:13px;font-weight:800;color:var(--gold)}
+
+  .swot{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .sw{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+  .sw h4{font-size:13px;margin-bottom:8px}
+  .sw.s h4{color:var(--acc)} .sw.w h4{color:var(--bad)}
+  .sw ul{list-style:none;font-size:13px;color:#cdd8f2}
+  .sw li{padding:3px 0 3px 16px;position:relative}
+  .sw li::before{content:"›";position:absolute;left:0;color:var(--mut)}
+
+  .path{display:flex;flex-direction:column;gap:8px}
+  .pstep{display:flex;gap:10px;align-items:center;font-size:13.5px;background:var(--card);
+    border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+  .pstep .rd{font-weight:800;color:var(--acc2);min-width:64px}
+  .pstep .od{margin-left:auto;font-weight:800}
+  .pstep .od.g{color:var(--acc)} .pstep .od.y{color:var(--warn)} .pstep .od.r{color:var(--bad)}
+
+  footer{text-align:center;color:var(--mut);font-size:12.5px;margin-top:50px;line-height:1.7}
+  .disc{background:#13101a;border:1px solid #2a1f3a;border-radius:12px;padding:14px 18px;
+    max-width:760px;margin:30px auto 0;font-size:12.5px;color:#b9a9d6}
+  .hide{display:none!important}
+
+  /* flag images */
+  .fimg{display:inline-block;width:auto;border-radius:4px;box-shadow:0 2px 8px #0006;vertical-align:middle;background:#0a1222}
+  .pod .flag,.mhead .flag,.thead .flag{display:flex;align-items:center;justify-content:center}
+  .pod .flag{margin:8px 0}
+
+  /* matches */
+  .secHead{display:flex;align-items:baseline;gap:12px;margin:40px 0 4px}
+  .secHead h2{font-size:22px;font-weight:800}
+  .secHead span{font-size:12.5px;color:var(--mut)}
+  .matches{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:14px;margin-top:14px}
+  .mc{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .mc .mtop{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);margin-bottom:12px}
+  .mc .mtop .stg{color:var(--acc2);font-weight:700}
+  .mc .teams{display:flex;align-items:center;gap:8px}
+  .mc .side{flex:1;text-align:center}
+  .mc .side .fl{font-size:30px}
+  .mc .side .fimg{margin-bottom:5px}
+  .mc .side .nn{font-size:13.5px;font-weight:700;margin-top:2px}
+  .mc .vs{font-size:12px;color:var(--mut);font-weight:700}
+  .mc .score{text-align:center;margin:8px 0 4px;font-size:13px;color:var(--mut)}
+  .mc .score b{color:var(--gold);font-size:16px}
+  .triple{display:flex;height:30px;border-radius:8px;overflow:hidden;margin-top:8px;font-size:11px;font-weight:800}
+  .triple>div{display:flex;align-items:center;justify-content:center;color:#06121a;min-width:0}
+  .triple .w1{background:var(--acc2)} .triple .dr{background:#5a6b8c;color:var(--txt)} .triple .w2{background:var(--acc)}
+  .tlabels{display:flex;justify-content:space-between;font-size:10.5px;color:var(--mut);margin-top:5px;text-transform:uppercase;letter-spacing:.5px}
+  .adv{display:flex;justify-content:space-between;font-size:12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+  .adv span b{color:var(--txt)}
+  .mc .why{font-size:12px;color:var(--mut);margin-top:8px;line-height:1.45}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="badge">🏆 FIFA World Cup 2026 · USA · Canada · Mexico</span>
+    <h1>Аналитический центр ЧМ-2026</h1>
+    <p class="sub">Глубокий разбор шансов на победу: вероятности титула, форма, состав, ключевые игроки, тактика, сильные и слабые стороны, путь к финалу.</p>
+    <p class="meta">48 команд · 16 городов · 104 матча · финал <b>19 июля 2026, MetLife Stadium</b></p>
+  </header>
+
+  <input class="search" id="search" placeholder="🔍 Поиск команды…">
+  <div class="bar" id="filters">
+    <span class="chip on" data-f="all">Все</span>
+    <span class="chip" data-f="fav">⭐ Фавориты</span>
+    <span class="chip" data-f="dark">🌙 Тёмные лошадки</span>
+    <span class="chip" data-f="out">Аутсайдеры топа</span>
+    <span class="chip" data-f="conf-uefa">Европа</span>
+    <span class="chip" data-f="conf-conmebol">Юж. Америка</span>
+    <span class="chip" data-f="conf-other">Остальные</span>
+  </div>
+
+  <div class="podium" id="podium"></div>
+
+  <div class="secHead">
+    <h2>⚽ Ближайшие матчи</h2>
+    <span id="matchSub">реальные матчи группового этапа · 24–27 июня 2026 · прогноз модели (П1 / ничья / П2)</span>
+  </div>
+  <div class="matches" id="matches"></div>
+
+  <div class="secHead"><h2>📋 Все команды</h2><span>отсортированы по шансам на титул</span></div>
+  <div class="grid" id="grid"></div>
+
+  <div class="disc">
+    ⚠️ <b>Дисклеймер:</b> расписание матчей — реальное (заключительные туры группового этапа ЧМ-2026, 24–27 июня 2026).
+    Вероятности же — это смоделированная оценка на основе рейтинга Эло, формы и силы состава, а не гарантия результата и не призыв к ставкам.
+    Реальный футбол всегда непредсказуем — в этом и вся красота.
+  </div>
+
+  <footer>
+    Сделано как аналитический инструмент · модель учитывает рейтинг Эло, силу состава, форму, глубину скамейки, тренера и сетку.<br>
+    Нажми на любую команду, чтобы открыть детальный разбор.
+  </footer>
+</div>
+
+<div class="ov" id="ov"><div class="modal" id="modal"></div></div>
+
+<script>
+/* ====== ДАННЫЕ ======
+   win = вероятность стать чемпионом (%)
+   ratings: атака/оборона/средняя линия/глубина/тренер/опыт (0-100)
+*/
+const TEAMS = [
+{
+  id:"fra", name:"Франция", flag:"🇫🇷", group:"Группа I", conf:"uefa", tier:"fav", win:16.5,
+  semi:48, qf:67, elo:2080, coach:"Дидье Дешам", style:"Гибкий 4-2-3-1, смертельные контратаки",
+  desc:"Действующие финалисты и эталон глубины состава в мире. Франция способна выставить два равных по силе стартовых состава. Сочетание молодой звёздной атаки и опытной оси даёт им статус главного фаворита наряду с Англией и Испанией.",
+  ratings:{Атака:95,Оборона:86,Полузащита:88,Глубина:96,Тренер:88,Опыт:90},
+  players:[
+    {n:"Килиан Мбаппе",p:"Нападающий",r:9.5,d:"Капитан и абсолютный лидер атаки, скорость и решающие голы в плей-офф."},
+    {n:"Орельен Чуамени",p:"Опорник",r:8.7,d:"Мотор центра поля, прерывает атаки и начинает свои."},
+    {n:"Уильям Салиба",p:"Защитник",r:8.6,d:"Лучший молодой ЦЗ мира, спокойствие и игра на опережение."},
+    {n:"Майк Меньян",p:"Вратарь",r:8.4,d:"Надёжность и игра ногами высокого уровня."}
+  ],
+  strengths:["Беспрецедентная глубина — ротация без потери класса","Опыт больших турниров и финалов","Мбаппе решает матчи в одиночку","Сбалансированная оборона"],
+  weaknesses:["Зависимость от формы Мбаппе","Иногда пассивность в группе","Вопросы по позиции левого защитника"],
+  path:[["1/8 финала","Уверенно",1.55,"g"],["1/4 финала","Реально",2.1,"g"],["1/2 финала","Сложно",3.0,"y"],["Финал","50/50",3.4,"y"]]
+},
+{
+  id:"esp", name:"Испания", flag:"🇪🇸", group:"Группа H", conf:"uefa", tier:"fav", win:15.0,
+  semi:46, qf:64, elo:2070, coach:"Луис де ла Фуэнте", style:"Доминирующий 4-3-3, контроль мяча",
+  desc:"Чемпионы Европы-2024, играющие в самый цельный командный футбол на планете. Молодёжь Ямаль-Педри-Гави сочетается с дисциплиной и контролем. Главный претендент благодаря балансу владения и вертикали.",
+  ratings:{Атака:90,Оборона:85,Полузащита:96,Глубина:88,Тренер:86,Опыт:80},
+  players:[
+    {n:"Ламин Ямаль",p:"Вингер",r:9.4,d:"Феномен поколения, обводка и пас, решает в одиночку."},
+    {n:"Родри",p:"Опорник",r:9.2,d:"Лучший опорный полузащитник мира, дирижёр темпа."},
+    {n:"Педри",p:"Полузащитник",r:8.8,d:"Идеальное чувство пространства и контроль ритма."},
+    {n:"Унаи Симон",p:"Вратарь",r:8.2,d:"Стабильный и уверенный в игре ногами."}
+  ],
+  strengths:["Лучший контроль мяча в мире","Молодость + чемпионская уверенность","Глубина в полузащите феноменальна","Чёткая игровая идея"],
+  weaknesses:["Нет топ-бомбардира мирового уровня","Зависимость от здоровья Родри","Иногда не хватает плана Б"],
+  path:[["1/8 финала","Уверенно",1.5,"g"],["1/4 финала","Реально",2.0,"g"],["1/2 финала","Сложно",2.9,"y"],["Финал","50/50",3.3,"y"]]
+},
+{
+  id:"eng", name:"Англия", flag:"🏴", group:"Группа L", conf:"uefa", tier:"fav", win:13.5,
+  semi:44, qf:63, elo:2050, coach:"Томас Тухель", style:"Прагматичный 4-2-3-1 с быстрыми флангами",
+  desc:"Сборная с, возможно, лучшим набором индивидуальностей в атаке. С приходом Тухеля добавилась тактическая жёсткость, которой не хватало раньше. Вечный фаворит, которому осталось снять «проклятие финалов».",
+  ratings:{Атака:93,Оборона:84,Полузащита:87,Глубина:90,Тренер:85,Опыт:82},
+  players:[
+    {n:"Джуд Беллингем",p:"Полузащитник",r:9.3,d:"Двигатель и лидер, голы из глубины, лидерские качества."},
+    {n:"Харри Кейн",p:"Нападающий",r:9.0,d:"Машина по голам и связующее звено, рекордсмен сборной."},
+    {n:"Букайо Сака",p:"Вингер",r:8.7,d:"Постоянная угроза с правого фланга."},
+    {n:"Джордан Пикфорд",p:"Вратарь",r:8.1,d:"Специалист по серии пенальти."}
+  ],
+  strengths:["Топ-таланты на каждой позиции атаки","Тактическая дисциплина Тухеля","Глубина и качество ротации","Опыт полуфиналов и финалов"],
+  weaknesses:["Психология решающих матчей","Нестабильность центра обороны","Излишняя осторожность в важных играх"],
+  path:[["1/8 финала","Уверенно",1.6,"g"],["1/4 финала","Реально",2.1,"g"],["1/2 финала","Сложно",3.1,"y"],["Финал","50/50",3.5,"y"]]
+},
+{
+  id:"arg", name:"Аргентина", flag:"🇦🇷", group:"Группа J", conf:"conmebol", tier:"fav", win:12.0,
+  semi:42, qf:60, elo:2100, coach:"Лионель Скалони", style:"Сбалансированный 4-3-3, гибкость по сопернику",
+  desc:"Действующие чемпионы мира с самой сильной командной химией. Скалони построил машину, выигрывающую трофеи. Вопрос один — возраст Месси и оси команды через 4 года после Катара.",
+  ratings:{Атака:90,Оборона:88,Полузащита:86,Глубина:84,Тренер:90,Опыт:94},
+  players:[
+    {n:"Лионель Месси",p:"Нападающий",r:9.2,d:"Гений, даже в 38 решает судьбу матчей моментами магии."},
+    {n:"Эмилиано Мартинес",p:"Вратарь",r:9.0,d:"Король серий пенальти и психологических дуэлей."},
+    {n:"Энцо Фернандес",p:"Полузащитник",r:8.5,d:"Дирижёр и связующее звено в центре."},
+    {n:"Хулиан Альварес",p:"Нападающий",r:8.7,d:"Неутомимый форвард, наследник лидерства."}
+  ],
+  strengths:["Чемпионский менталитет и химия","Лучший вратарь по пенальти","Опыт побед в решающих матчах","Гениальность Месси"],
+  weaknesses:["Возраст ключевых игроков","Зависимость от Месси","Глубина уступает европейским топам"],
+  path:[["1/8 финала","Уверенно",1.5,"g"],["1/4 финала","Реально",2.0,"g"],["1/2 финала","Сложно",3.0,"y"],["Финал","50/50",3.4,"y"]]
+},
+{
+  id:"bra", name:"Бразилия", flag:"🇧🇷", group:"Группа C", conf:"conmebol", tier:"fav", win:11.0,
+  semi:40, qf:60, elo:2040, coach:"Карло Анчелотти", style:"Атакующий 4-2-3-1 с акцентом на фланги",
+  desc:"Под руководством Анчелотти Бразилия впервые доверилась иностранному тренеру-победителю. Колоссальный атакующий потенциал и новое поколение талантов. Если найдут баланс в обороне — реальные чемпионы.",
+  ratings:{Атака:94,Оборона:82,Полузащита:84,Глубина:90,Тренер:89,Опыт:85},
+  players:[
+    {n:"Винисиус Жуниор",p:"Вингер",r:9.1,d:"Взрывная скорость и дриблинг, решает матчи на фланге."},
+    {n:"Родриго",p:"Вингер",r:8.6,d:"Универсальность и хладнокровие в решающие моменты."},
+    {n:"Эндрик",p:"Нападающий",r:8.3,d:"Молодой бомбардир с огромным потенциалом."},
+    {n:"Алисон",p:"Вратарь",r:8.8,d:"Один из лучших вратарей мира, надёжность."}
+  ],
+  strengths:["Атакующий талант мирового класса","Опыт Анчелотти в больших матчах","Глубина на флангах","Новое голодное поколение"],
+  weaknesses:["Нестабильная оборона","Нет доминирующего опорника","Психология после неудач последних турниров"],
+  path:[["1/8 финала","Уверенно",1.55,"g"],["1/4 финала","Реально",2.1,"g"],["1/2 финала","Сложно",3.1,"y"],["Финал","50/50",3.5,"y"]]
+},
+{
+  id:"por", name:"Португалия", flag:"🇵🇹", group:"Группа K", conf:"uefa", tier:"fav", win:8.0,
+  semi:34, qf:54, elo:2010, coach:"Роберто Мартинес", style:"Атакующий 4-3-3 с креативной осью",
+  desc:"Победители Лиги наций с обилием креативных игроков. Поколение между Роналду и молодёжью. Проблема — реализовать огромный индивидуальный потенциал в командный результат.",
+  ratings:{Атака:90,Оборона:83,Полузащита:90,Глубина:88,Тренер:80,Опыт:84},
+  players:[
+    {n:"Бернарду Силва",p:"Полузащитник",r:8.8,d:"Интеллект, универсальность и работа на команду."},
+    {n:"Витинья",p:"Полузащитник",r:8.7,d:"Дирижёр темпа, лучший сезон в карьере."},
+    {n:"Рафаэл Леау",p:"Вингер",r:8.4,d:"Скорость и непредсказуемость на фланге."},
+    {n:"Криштиану Роналду",p:"Нападающий",r:7.8,d:"Опыт и голевое чутьё, лидерство в раздевалке."}
+  ],
+  strengths:["Глубина в полузащите топ-уровня","Креатив и индивидуальное мастерство","Опыт побед в финалах турниров"],
+  weaknesses:["Баланс между звёздами","Возраст лидеров атаки","Тренерские вопросы в плей-офф"],
+  path:[["1/8 финала","Уверенно",1.7,"g"],["1/4 финала","Сложно",2.4,"y"],["1/2 финала","Тяжело",3.6,"r"],["Финал","Аутсайдер",4.1,"r"]]
+},
+{
+  id:"ger", name:"Германия", flag:"🇩🇪", group:"Группа E", conf:"uefa", tier:"dark", win:7.0,
+  semi:32, qf:52, elo:1990, coach:"Юлиан Нагельсманн", style:"Современный 4-2-3-1, прессинг и владение",
+  desc:"Возрождение под Нагельсманном после провальных лет. Домашнее Евро-2024 показало вернувшуюся структуру и характер. Молодёжь Вирц-Мусиала может выстрелить именно сейчас.",
+  ratings:{Атака:86,Оборона:82,Полузащита:90,Глубина:84,Тренер:86,Опыт:80},
+  players:[
+    {n:"Флориан Вирц",p:"Полузащитник",r:9.0,d:"Креативный мотор, лучшая форма карьеры."},
+    {n:"Джамал Мусиала",p:"Полузащитник",r:8.9,d:"Дриблинг и непредсказуемость в финальной трети."},
+    {n:"Антонио Рюдигер",p:"Защитник",r:8.4,d:"Лидер обороны, агрессия и опыт."},
+    {n:"Кай Хаверц",p:"Нападающий",r:8.0,d:"Универсальность и работа на команду."}
+  ],
+  strengths:["Лучший креативный дуэт турнира (Вирц/Мусиала)","Тактическая гибкость Нагельсманна","Менталитет больших турниров"],
+  weaknesses:["Нестабильность на флангах обороны","Нет классического бомбардира","Глубина уступает топ-фаворитам"],
+  path:[["1/8 финала","Реально",1.8,"g"],["1/4 финала","Сложно",2.5,"y"],["1/2 финала","Тяжело",3.7,"r"],["Финал","Аутсайдер",4.3,"r"]]
+},
+{
+  id:"ned", name:"Нидерланды", flag:"🇳🇱", group:"Группа F", conf:"uefa", tier:"dark", win:5.5,
+  semi:28, qf:48, elo:1970, coach:"Рональд Куман", style:"Структурный 4-3-3 с сильной осью",
+  desc:"Команда с топовой осью по центру поля — от вратаря до атаки. Не хватает глубины на флангах, но дисциплина и индивидуальный класс делают их опасными для любого.",
+  ratings:{Атака:84,Оборона:86,Полузащита:86,Глубина:80,Тренер:80,Опыт:82},
+  players:[
+    {n:"Вирджил ван Дейк",p:"Защитник",r:8.8,d:"Капитан и эталон центрального защитника."},
+    {n:"Коди Гакпо",p:"Вингер",r:8.4,d:"Голы и габариты на левом фланге."},
+    {n:"Френки де Йонг",p:"Полузащитник",r:8.5,d:"Прогрессивный пас и контроль мяча."},
+    {n:"Мемфис Депай",p:"Нападающий",r:8.1,d:"Опыт и голевое чутьё лидера атаки."}
+  ],
+  strengths:["Сильнейшая центральная ось","Лидерство ван Дейка","Тактическая дисциплина"],
+  weaknesses:["Слабая глубина","Вопросы на флангах обороны","Зависимость от ключевых ветеранов"],
+  path:[["1/8 финала","Реально",1.9,"g"],["1/4 финала","Сложно",2.7,"y"],["1/2 финала","Тяжело",4.0,"r"],["Финал","Аутсайдер",4.6,"r"]]
+},
+{
+  id:"bel", name:"Бельгия", flag:"🇧🇪", group:"Группа G", conf:"uefa", tier:"dark", win:4.0,
+  semi:22, qf:42, elo:1940, coach:"Руди Гарсия", style:"Атакующий 4-2-3-1 с акцентом на креатив",
+  desc:"Переходный период после «золотого поколения». Остаются классные индивидуальности во главе с Де Брёйне, но требуется обновление и стабильность результата.",
+  ratings:{Атака:85,Оборона:78,Полузащита:86,Глубина:78,Тренер:76,Опыт:80},
+  players:[
+    {n:"Кевин Де Брёйне",p:"Полузащитник",r:8.7,d:"Гениальный созидатель, лучший пас турнира."},
+    {n:"Жереми Доку",p:"Вингер",r:8.3,d:"Взрывной дриблинг один в один."},
+    {n:"Ромелу Лукаку",p:"Нападающий",r:8.0,d:"Мощь и голевое чутьё лидера атаки."},
+    {n:"Тибо Куртуа",p:"Вратарь",r:8.6,d:"Топ-вратарь, способный выиграть серию в одиночку."}
+  ],
+  strengths:["Креатив Де Брёйне","Топ-вратарь","Опасная атака один в один"],
+  weaknesses:["Стареющий костяк","Нестабильная оборона","Переходный период"],
+  path:[["1/8 финала","Реально",2.0,"g"],["1/4 финала","Тяжело",2.9,"y"],["1/2 финала","Очень сложно",4.4,"r"],["Финал","Аутсайдер",5.2,"r"]]
+},
+{
+  id:"usa", name:"США", flag:"🇺🇸", group:"Группа D", conf:"other", tier:"out", win:3.0,
+  semi:18, qf:38, elo:1850, coach:"Маурисио Почеттино", style:"Энергичный 4-3-3, прессинг и фланги",
+  desc:"Хозяева турнира с самым талантливым поколением в истории страны. Фактор домашних трибун и поля огромен. Почеттино добавляет тактической глубины — могут выстрелить далеко.",
+  ratings:{Атака:80,Оборона:78,Полузащита:82,Глубина:80,Тренер:82,Опыт:68},
+  players:[
+    {n:"Кристиан Пулишич",p:"Вингер",r:8.5,d:"Лидер и лучший игрок поколения, решает матчи."},
+    {n:"Уэстон Маккенни",p:"Полузащитник",r:8.0,d:"Энергия и универсальность в центре."},
+    {n:"Джовани Рейна",p:"Полузащитник",r:7.7,d:"Креатив и удар при здоровье."},
+    {n:"Мэтт Тёрнер",p:"Вратарь",r:7.6,d:"Надёжность в рамке хозяев."}
+  ],
+  strengths:["Фактор домашнего поля","Молодое талантливое поколение","Тренерский класс Почеттино","Энергия и физика"],
+  weaknesses:["Недостаток опыта решающих матчей","Глубина центральной обороны","Реализация моментов"],
+  path:[["1/8 финала","Реально",2.1,"g"],["1/4 финала","Тяжело",3.2,"y"],["1/2 финала","Очень сложно",4.8,"r"],["Финал","Аутсайдер",6.0,"r"]]
+},
+{
+  id:"cro", name:"Хорватия", flag:"🇭🇷", group:"Группа L", conf:"uefa", tier:"out", win:2.5,
+  semi:16, qf:36, elo:1920, coach:"Златко Далич", style:"Контроль через центр, 4-3-3",
+  desc:"Вечные переростки турниров — финал-2018, бронза-2022. Возраст золотого поколения уже критичен, но турнирный опыт и умение терпеть в плей-офф остаются их оружием.",
+  ratings:{Атака:78,Оборона:80,Полузащита:88,Глубина:74,Тренер:82,Опыт:88},
+  players:[
+    {n:"Лука Модрич",p:"Полузащитник",r:8.4,d:"Легенда, дирижирует игрой даже в ветеранском возрасте."},
+    {n:"Йошко Гвардиол",p:"Защитник",r:8.5,d:"Современный защитник топ-уровня."},
+    {n:"Матео Ковачич",p:"Полузащитник",r:8.1,d:"Контроль и продвижение мяча."},
+    {n:"Доминик Ливакович",p:"Вратарь",r:8.0,d:"Герой серий пенальти прошлых турниров."}
+  ],
+  strengths:["Турнирный опыт и характер","Качество центра поля","Умение играть в плей-офф"],
+  weaknesses:["Возраст лидеров","Слабая глубина","Дефицит скорости и голов"],
+  path:[["1/8 финала","Реально",2.2,"g"],["1/4 финала","Тяжело",3.3,"y"],["1/2 финала","Очень сложно",5.0,"r"],["Финал","Аутсайдер",6.5,"r"]]
+},
+{
+  id:"uru", name:"Уругвай", flag:"🇺🇾", group:"Группа H", conf:"conmebol", tier:"out", win:3.5,
+  semi:20, qf:40, elo:1960, coach:"Марсело Бьелса", style:"Агрессивный прессинг Бьелсы, вертикаль",
+  desc:"Под руководством Бьелсы получили новую идентичность — агрессивный, вертикальный футбол. Сочетание молодых талантов и фирменного уругвайского характера делает их тёмной лошадкой высокого уровня.",
+  ratings:{Атака:84,Оборона:82,Полузащита:84,Глубина:80,Тренер:86,Опыт:80},
+  players:[
+    {n:"Федерико Вальверде",p:"Полузащитник",r:8.8,d:"Двигатель команды, объём и удар."},
+    {n:"Дарвин Нуньес",p:"Нападающий",r:8.0,d:"Скорость и давление на оборону."},
+    {n:"Рональд Араухо",p:"Защитник",r:8.3,d:"Силовой и быстрый центральный защитник."},
+    {n:"Мануэль Угарте",p:"Опорник",r:7.9,d:"Разрушитель и страховка обороны."}
+  ],
+  strengths:["Идея и интенсивность Бьелсы","Сильная физика и характер","Топ-полузащита во главе с Вальверде"],
+  weaknesses:["Реализация моментов","Дисциплина при прессинге","Стабильность результата"],
+  path:[["1/8 финала","Реально",1.95,"g"],["1/4 финала","Сложно",2.8,"y"],["1/2 финала","Тяжело",4.2,"r"],["Финал","Аутсайдер",5.3,"r"]]
+},
+{
+  id:"mar", name:"Марокко", flag:"🇲🇦", group:"Группа C", conf:"other", tier:"dark", win:3.5,
+  semi:20, qf:40, elo:1900, coach:"Валид Реграги", style:"Дисциплина и контратаки, 4-3-3",
+  desc:"Полуфиналисты Катара-2022 доказали, что это не случайность. Лучшая африканская сборная с европейским уровнем дисциплины, топ-вратарём и крепкой обороной. Главная сенсация, ставшая фаворитом второго эшелона.",
+  ratings:{Атака:80,Оборона:88,Полузащита:84,Глубина:80,Тренер:84,Опыт:80},
+  players:[
+    {n:"Ашраф Хакими",p:"Защитник",r:8.6,d:"Лучший правый защитник, подключения и скорость."},
+    {n:"Брахим Диас",p:"Полузащитник",r:8.2,d:"Креатив и обводка между линиями."},
+    {n:"Яссин Буну",p:"Вратарь",r:8.4,d:"Герой ЧМ-2022, спасает в решающие моменты."},
+    {n:"Нуссаир Мазрауи",p:"Защитник",r:8.0,d:"Универсальность и надёжность фланга."}
+  ],
+  strengths:["Оборонительная дисциплина мирового класса","Опыт полуфинала ЧМ","Топ-вратарь и сильные фланги","Командный дух"],
+  weaknesses:["Дефицит классного бомбардира","Зависимость от обороны","Реализация в позиционной атаке"],
+  path:[["1/8 финала","Реально",1.95,"g"],["1/4 финала","Сложно",2.8,"y"],["1/2 финала","Тяжело",4.1,"r"],["Финал","Аутсайдер",5.2,"r"]]
+},
+{
+  id:"col", name:"Колумбия", flag:"🇨🇴", group:"Группа K", conf:"conmebol", tier:"dark", win:3.0,
+  semi:18, qf:38, elo:1930, coach:"Нестор Лоренсо", style:"Атакующий 4-2-3-1 вокруг лидера",
+  desc:"Прошли долгую беспроигрышную серию и финал Кубка Америки. Команда с креативной осью и растущей уверенностью. Хамес дирижирует, молодёжь обеспечивает скорость.",
+  ratings:{Атака:84,Оборона:80,Полузащита:84,Глубина:78,Тренер:80,Опыт:78},
+  players:[
+    {n:"Хамес Родригес",p:"Полузащитник",r:8.4,d:"Дирижёр атаки, ассисты и стандарты."},
+    {n:"Луис Диас",p:"Вингер",r:8.6,d:"Взрывной дриблёр, решает матчи на фланге."},
+    {n:"Хуан Давид Кордоба",p:"Защитник",r:8.0,d:"Надёжность в центре обороны."},
+    {n:"Давинсон Санчес",p:"Защитник",r:7.9,d:"Опыт и силовая борьба."}
+  ],
+  strengths:["Креатив Хамеса и скорость Диаса","Растущая уверенность","Баланс опыта и молодости"],
+  weaknesses:["Глубина состава","Зависимость от лидеров","Стабильность в плей-офф"],
+  path:[["1/8 финала","Реально",2.0,"g"],["1/4 финала","Тяжело",3.0,"y"],["1/2 финала","Очень сложно",4.5,"r"],["Финал","Аутсайдер",5.6,"r"]]
+}
+];
+
+/* ====== СПРАВОЧНИК СБОРНЫХ (для матчей) ======
+   Команды, которых нет среди подробных профилей, но которые играют ближайшие матчи.
+   iso — код для флага (flagcdn), elo — рейтинг для модели прогноза.
+*/
+const ISO={fra:'fr',esp:'es',eng:'gb-eng',arg:'ar',bra:'br',por:'pt',ger:'de',ned:'nl',
+  bel:'be',usa:'us',cro:'hr',uru:'uy',mar:'ma',col:'co'};
+const NAT={
+  sui:{name:'Швейцария',iso:'ch',elo:1820}, can:{name:'Канада',iso:'ca',elo:1780},
+  bih:{name:'Босния',iso:'ba',elo:1690}, qat:{name:'Катар',iso:'qa',elo:1620},
+  sco:{name:'Шотландия',iso:'gb-sct',elo:1740}, hai:{name:'Гаити',iso:'ht',elo:1490},
+  cze:{name:'Чехия',iso:'cz',elo:1760}, mex:{name:'Мексика',iso:'mx',elo:1860},
+  rsa:{name:'ЮАР',iso:'za',elo:1610}, kor:{name:'Южная Корея',iso:'kr',elo:1740},
+  cuw:{name:'Кюрасао',iso:'cw',elo:1500}, civ:{name:'Кот-д’Ивуар',iso:'ci',elo:1810},
+  ecu:{name:'Эквадор',iso:'ec',elo:1860}, jpn:{name:'Япония',iso:'jp',elo:1850},
+  swe:{name:'Швеция',iso:'se',elo:1770}, tun:{name:'Тунис',iso:'tn',elo:1690},
+  tur:{name:'Турция',iso:'tr',elo:1830}, par:{name:'Парагвай',iso:'py',elo:1720},
+  aus:{name:'Австралия',iso:'au',elo:1710}, nor:{name:'Норвегия',iso:'no',elo:1890},
+  sen:{name:'Сенегал',iso:'sn',elo:1860}, irq:{name:'Ирак',iso:'iq',elo:1610},
+  cpv:{name:'Кабо-Верде',iso:'cv',elo:1610}, ksa:{name:'Саудовская Аравия',iso:'sa',elo:1650},
+  egy:{name:'Египет',iso:'eg',elo:1710}, irn:{name:'Иран',iso:'ir',elo:1760},
+  nzl:{name:'Новая Зеландия',iso:'nz',elo:1560}, pan:{name:'Панама',iso:'pa',elo:1700},
+  gha:{name:'Гана',iso:'gh',elo:1720}, cod:{name:'ДР Конго',iso:'cd',elo:1740},
+  uzb:{name:'Узбекистан',iso:'uz',elo:1660}, alg:{name:'Алжир',iso:'dz',elo:1790},
+  aut:{name:'Австрия',iso:'at',elo:1830}, jor:{name:'Иордания',iso:'jo',elo:1600}
+};
+function nation(code){ return TEAMS.find(t=>t.id===code) || NAT[code]; }
+function isoOf(code){ return ISO[code] || (NAT[code] && NAT[code].iso) || ''; }
+function flagImg(code,h){ const iso=isoOf(code); if(!iso) return '';
+  return `<img class="fimg" style="height:${h}px" src="https://flagcdn.com/w80/${iso}.png" alt="" loading="lazy">`; }
+
+/* ====== РЕАЛЬНЫЕ МАТЧИ ======
+   Заключительные туры группового этапа ЧМ-2026 (24–27 июня 2026).
+   ko:false — групповой этап (ничья — реальный исход). host: хозяева получают бонус Эло.
+   Проценты считаются из рейтинга Эло — той же моделью, что и шансы на титул.
+*/
+const MATCHES=[
+  // 24 июня
+  {a:"sui",b:"can",g:"B",date:"24 июня",venue:"Ванкувер",host:"b"},
+  {a:"bih",b:"qat",g:"B",date:"24 июня",venue:"Сиэтл"},
+  {a:"sco",b:"bra",g:"C",date:"24 июня",venue:"Майами"},
+  {a:"mar",b:"hai",g:"C",date:"24 июня",venue:"Атланта"},
+  {a:"cze",b:"mex",g:"A",date:"24 июня",venue:"Мехико",host:"b"},
+  {a:"rsa",b:"kor",g:"A",date:"24 июня",venue:"Монтеррей"},
+  // 25 июня
+  {a:"cuw",b:"civ",g:"E",date:"25 июня",venue:"Филадельфия"},
+  {a:"ecu",b:"ger",g:"E",date:"25 июня",venue:"Нью-Джерси"},
+  {a:"jpn",b:"swe",g:"F",date:"25 июня",venue:"Арлингтон"},
+  {a:"tun",b:"ned",g:"F",date:"25 июня",venue:"Канзас-Сити"},
+  {a:"tur",b:"usa",g:"D",date:"25 июня",venue:"Лос-Анджелес",host:"b"},
+  {a:"par",b:"aus",g:"D",date:"25 июня",venue:"Санта-Клара"},
+  // 26 июня
+  {a:"nor",b:"fra",g:"I",date:"26 июня",venue:"Фоксборо"},
+  {a:"sen",b:"irq",g:"I",date:"26 июня",venue:"Торонто"},
+  {a:"cpv",b:"ksa",g:"H",date:"26 июня",venue:"Хьюстон"},
+  {a:"uru",b:"esp",g:"H",date:"26 июня",venue:"Гвадалахара"},
+  {a:"egy",b:"irn",g:"G",date:"26 июня",venue:"Сиэтл"},
+  {a:"nzl",b:"bel",g:"G",date:"26 июня",venue:"Ванкувер"},
+  // 27 июня
+  {a:"pan",b:"eng",g:"L",date:"27 июня",venue:"Нью-Джерси"},
+  {a:"cro",b:"gha",g:"L",date:"27 июня",venue:"Филадельфия"},
+  {a:"col",b:"por",g:"K",date:"27 июня",venue:"Майами"},
+  {a:"cod",b:"uzb",g:"K",date:"27 июня",venue:"Атланта"},
+  {a:"alg",b:"aut",g:"J",date:"27 июня",venue:"Канзас-Сити"},
+  {a:"jor",b:"arg",g:"J",date:"27 июня",venue:"Арлингтон"}
+];
+
+// Модель исхода матча из рейтинга Эло
+function predict(m){
+  const A=nation(m.a), B=nation(m.b);
+  let ra=A.elo, rb=B.elo;
+  if(m.host==="a") ra+=65;            // фактор своего поля
+  if(m.host==="b") rb+=65;
+  const eA=1/(1+Math.pow(10,(rb-ra)/400));   // ожидаемый результат A (0..1)
+  let D=0.30-0.22*Math.abs(2*eA-1);          // ничья: макс в равных матчах
+  D=Math.max(0.12,Math.min(0.30,D));
+  let pa=(1-D)*eA, pb=(1-D)*(1-eA);
+  // вероятный счёт
+  const ga=Math.max(0,Math.round(0.9+1.9*eA)), gb=Math.max(0,Math.round(0.7+1.6*(1-eA)));
+  const r=x=>Math.round(x*100);
+  return {A,B,a:m.a,b:m.b,pa:r(pa),pd:r(D),pb:r(pb),score:`${ga}:${gb}`};
+}
+
+function whyText(m,p){
+  const diff=nation(m.a).elo-nation(m.b).elo;
+  const fav = p.pa>=p.pb?p.A:p.B, dog = p.pa>=p.pb?p.B:p.A;
+  if(Math.abs(diff)<45) return `Равная пара — многое решат настрой, стандарты и реализация. Ничья весьма вероятна.`;
+  if(Math.abs(diff)<120) return `${fav.name} — фаворит за счёт класса, но ${dog.name} способны навязать борьбу и зацепить очки.`;
+  return `${fav.name} заметно сильнее по уровню и глубине; ${dog.name} остаётся надеяться на оборону и контратаки.`;
+}
+
+const matchesEl=document.getElementById('matches');
+function renderMatches(){
+  matchesEl.innerHTML=MATCHES.map(m=>{
+    const p=predict(m);
+    return `<div class="mc">
+      <div class="mtop"><span class="stg">Группа ${m.g} · групповой этап</span><span>${m.date} · ${m.venue}</span></div>
+      <div class="teams">
+        <div class="side">${flagImg(m.a,30)}<div class="nn">${p.A.name}</div></div>
+        <div class="vs">VS</div>
+        <div class="side">${flagImg(m.b,30)}<div class="nn">${p.B.name}</div></div>
+      </div>
+      <div class="score">вероятный счёт <b>${p.score}</b></div>
+      <div class="triple">
+        <div class="w1" style="flex:${p.pa}">${p.pa}%</div>
+        <div class="dr" style="flex:${p.pd}">${p.pd}%</div>
+        <div class="w2" style="flex:${p.pb}">${p.pb}%</div>
+      </div>
+      <div class="tlabels"><span>П1 ${p.A.name}</span><span>ничья</span><span>П2 ${p.B.name}</span></div>
+      <div class="why">${whyText(m,p)}</div>
+    </div>`;
+  }).join('');
+}
+
+/* ===== RENDER ===== */
+const grid=document.getElementById('grid');
+const podium=document.getElementById('podium');
+let activeF='all', q='';
+
+const colorFor=p=>p>=12?'var(--acc)':p>=6?'var(--acc2)':p>=3?'var(--warn)':'var(--bad)';
+const tierLbl={fav:'⭐ Фаворит',dark:'🌙 Тёмная лошадка',out:'Претендент',long:'Аутсайдер'};
+const tierCls={fav:'t-fav',dark:'t-dark',out:'t-out',long:'t-long'};
+
+function renderPodium(){
+  const top=[...TEAMS].sort((a,b)=>b.win-a.win).slice(0,3);
+  const medal=['🥇','🥈','🥉'];
+  podium.innerHTML=top.map((t,i)=>`
+    <div class="pod">
+      <div class="rank">${medal[i]} #${i+1} ФАВОРИТ</div>
+      <div class="flag">${flagImg(t.id,46)}</div>
+      <div class="nm">${t.name}</div>
+      <div class="pc">${t.win}%</div>
+      <small>вероятность титула</small>
+    </div>`).join('');
+}
+
+function renderGrid(){
+  const list=[...TEAMS].sort((a,b)=>b.win-a.win).filter(t=>{
+    if(q && !t.name.toLowerCase().includes(q)) return false;
+    if(activeF==='all') return true;
+    if(activeF.startsWith('conf-')) return t.conf===activeF.slice(5);
+    return t.tier===activeF;
+  });
+  grid.innerHTML=list.map(t=>`
+    <div class="team" onclick="openTeam('${t.id}')">
+      <div class="thead">
+        <span class="flag">${flagImg(t.id,28)}</span>
+        <div>
+          <div class="tname">${t.name}</div>
+          <div class="tgroup">${t.group} · ${t.coach}</div>
+        </div>
+        <span class="tier ${tierCls[t.tier]}">${tierLbl[t.tier]}</span>
+      </div>
+      <div class="probrow">
+        <div><div class="big" style="color:${colorFor(t.win)}">${t.win}%</div><div class="lbl">шанс на титул</div></div>
+        <div style="text-align:right"><div class="lbl">Эло ${t.elo}</div></div>
+      </div>
+      <div class="meter"><i style="width:${Math.min(t.win*5,100)}%"></i></div>
+      <div class="mini">
+        <div><b>${t.qf}%</b><span>1/4 финала</span></div>
+        <div><b>${t.semi}%</b><span>1/2 финала</span></div>
+        <div><b>${t.win}%</b><span>чемпион</span></div>
+      </div>
+    </div>`).join('') || `<p style="color:var(--mut);grid-column:1/-1;text-align:center;padding:30px">Ничего не найдено.</p>`;
+}
+
+function openTeam(id){
+  const t=TEAMS.find(x=>x.id===id);
+  const m=document.getElementById('modal');
+  const ratingBars=Object.entries(t.ratings).map(([k,v])=>`
+    <div class="b"><div class="l"><span>${k}</span><span>${v}/100</span></div>
+    <div class="track"><i style="width:${v}%;background:${v>=88?'var(--acc)':v>=80?'var(--acc2)':'var(--warn)'}"></i></div></div>`).join('');
+  const pls=t.players.map(p=>`
+    <div class="pl"><span class="rt">${p.r}</span><div class="pn">${p.n}</div>
+    <div class="pp">${p.p}</div><div class="pd">${p.d}</div></div>`).join('');
+  const path=t.path.map(s=>`
+    <div class="pstep"><span class="rd">${s[0]}</span><span>${s[1]}</span>
+    <span class="od ${s[3]}">×${s[2]}</span></div>`).join('');
+  m.innerHTML=`
+    <div class="mhead">
+      <span class="flag">${flagImg(t.id,46)}</span>
+      <div><h2>${t.name}</h2>
+        <div class="tgroup">${t.group} · ${t.coach} · Эло ${t.elo}</div>
+        <span class="tier ${tierCls[t.tier]}" style="display:inline-block;margin-top:6px">${tierLbl[t.tier]}</span>
+      </div>
+      <button class="close" onclick="closeOv()">×</button>
+    </div>
+    <div class="probrow" style="margin-top:18px">
+      <div><div class="big" style="font-size:40px;color:${colorFor(t.win)}">${t.win}%</div><div class="lbl">вероятность стать чемпионом мира</div></div>
+      <div style="text-align:right"><div class="lbl">выход в 1/2: <b style="color:var(--txt)">${t.semi}%</b></div>
+      <div class="lbl">выход в 1/4: <b style="color:var(--txt)">${t.qf}%</b></div></div>
+    </div>
+    <div class="meter"><i style="width:${Math.min(t.win*5,100)}%"></i></div>
+
+    <div class="secT">📋 Обзор</div>
+    <p class="desc">${t.desc}</p>
+    <p class="desc" style="margin-top:8px;color:var(--mut)"><b style="color:var(--acc2)">Стиль:</b> ${t.style}</p>
+
+    <div class="secT">📊 Профиль силы</div>
+    <div class="bars">${ratingBars}</div>
+
+    <div class="secT">⭐ Ключевые игроки</div>
+    <div class="players">${pls}</div>
+
+    <div class="secT">⚖️ Сильные и слабые стороны</div>
+    <div class="swot">
+      <div class="sw s"><h4>✅ Сильные стороны</h4><ul>${t.strengths.map(s=>`<li>${s}</li>`).join('')}</ul></div>
+      <div class="sw w"><h4>⚠️ Слабые стороны</h4><ul>${t.weaknesses.map(s=>`<li>${s}</li>`).join('')}</ul></div>
+    </div>
+
+    <div class="secT">🛣️ Путь к финалу (сложность по раундам)</div>
+    <div class="path">${path}</div>
+  `;
+  document.getElementById('ov').classList.add('on');
+}
+function closeOv(){document.getElementById('ov').classList.remove('on');}
+document.getElementById('ov').addEventListener('click',e=>{if(e.target.id==='ov')closeOv();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOv();});
+
+document.getElementById('filters').addEventListener('click',e=>{
+  if(!e.target.classList.contains('chip'))return;
+  document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+  e.target.classList.add('on'); activeF=e.target.dataset.f; renderGrid();
+});
+document.getElementById('search').addEventListener('input',e=>{q=e.target.value.toLowerCase().trim();renderGrid();});
+
+renderPodium(); renderMatches(); renderGrid();
+</script>
+</body>
+</html>
