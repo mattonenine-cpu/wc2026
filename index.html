@@ -156,8 +156,33 @@
   ul.factors li{padding:6px 0 6px 20px;position:relative;border-bottom:1px solid var(--line)}
   ul.factors li:last-child{border-bottom:none}
   ul.factors li::before{content:"▹";position:absolute;left:0;color:var(--acc)}
-  .mc .mtop{display:flex;justify-content:space-between;font-size:11.5px;color:var(--mut);margin-bottom:12px}
+  .mc .mtop{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--mut);margin-bottom:4px}
   .mc .mtop .stg{color:var(--acc2);font-weight:700}
+  .mc .mdate{font-size:11px;color:var(--mut);margin-bottom:12px}
+  .st{font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:20px;letter-spacing:.3px}
+  .st.up{background:#4f8cff22;color:var(--acc2)}
+  .st.live{background:#ff6b6b22;color:var(--bad);animation:blink 1.4s infinite}
+  .st.done{background:#5a6b8c22;color:var(--mut)}
+  @keyframes blink{50%{opacity:.45}}
+  .mc.done{opacity:.72}
+  .mc.live{border-color:#ff6b6b66}
+  .realscore b{color:var(--gold);font-size:20px}
+  .rtag{font-size:10px;font-weight:800;padding:2px 7px;border-radius:6px;margin-left:6px;vertical-align:middle}
+  .rtag.live{background:var(--bad);color:#160606} .rtag.done{background:#5a6b8c;color:var(--txt)}
+  /* refresh bar */
+  .refbar{display:flex;align-items:center;gap:14px;margin:14px 0 4px;flex-wrap:wrap}
+  .rbtn{background:var(--card);border:1px solid var(--line);color:var(--txt);padding:8px 16px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;transition:.2s}
+  .rbtn:hover{border-color:var(--acc);color:var(--acc)}
+  .rstamp{font-size:12px;color:var(--mut)}
+  /* likely scorelines + real banner (modal) */
+  .scorelist{display:flex;gap:8px;flex-wrap:wrap}
+  .sl{display:flex;flex-direction:column;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 14px;min-width:62px}
+  .sl b{font-size:17px} .sl span{font-size:11px;color:var(--mut)}
+  .sl.top{border-color:var(--acc);background:#3ddc9714} .sl.top b{color:var(--acc)}
+  .realbanner{margin-top:16px;padding:12px 16px;border-radius:12px;font-size:14px;text-align:center;border:1px solid var(--line)}
+  .realbanner b{font-size:20px;color:var(--gold)}
+  .realbanner.live{background:#ff6b6b14;border-color:#ff6b6b55}
+  .realbanner.done{background:#5a6b8c14}
   .mc .teams{display:flex;align-items:center;gap:8px}
   .mc .side{flex:1;text-align:center}
   .mc .side .fl{font-size:30px}
@@ -201,8 +226,13 @@
   <div class="grid" id="grid"></div>
 
   <div class="secHead" id="matchesHead">
-    <h2>⚽ Ближайшие матчи</h2>
-    <span id="matchSub">реальные матчи группового этапа · 24–27 июня 2026 · нажми на матч для полного разбора</span>
+    <h2>⚽ Матчи</h2>
+    <span id="matchSub">групповой этап · 24–27 июня 2026 · статусы и счёт обновляются автоматически · нажми на матч для разбора</span>
+  </div>
+  <div class="refbar">
+    <button class="rbtn" onclick="refreshNow()">🔄 Обновить</button>
+    <span id="upStamp" class="rstamp"></span>
+    <span id="dataStamp" class="rstamp"></span>
   </div>
   <div class="matches" id="matches"></div>
 
@@ -469,55 +499,66 @@ function flagImg(code,h){ const iso=isoOf(code); if(!iso) return '';
   return `<img class="fimg" style="height:${h}px" src="https://flagcdn.com/w80/${iso}.png" alt="" loading="lazy">`; }
 
 /* ====== РЕАЛЬНЫЕ МАТЧИ ======
-   Заключительные туры группового этапа ЧМ-2026 (24–27 июня 2026).
-   ko:false — групповой этап (ничья — реальный исход). host: хозяева получают бонус Эло.
-   Проценты считаются из рейтинга Эло — той же моделью, что и шансы на титул.
+   Заключительные туры группового этапа ЧМ-2026. ko — время начала (UTC, ISO).
+   host: хозяева получают бонус Эло. Проценты и счёт — модель Пуассона на базе рейтинга.
 */
 const MATCHES=[
   // 24 июня
-  {a:"sui",b:"can",g:"B",date:"24 июня",venue:"Ванкувер",host:"b"},
-  {a:"bih",b:"qat",g:"B",date:"24 июня",venue:"Сиэтл"},
-  {a:"sco",b:"bra",g:"C",date:"24 июня",venue:"Майами"},
-  {a:"mar",b:"hai",g:"C",date:"24 июня",venue:"Атланта"},
-  {a:"cze",b:"mex",g:"A",date:"24 июня",venue:"Мехико",host:"b"},
-  {a:"rsa",b:"kor",g:"A",date:"24 июня",venue:"Монтеррей"},
+  {a:"sui",b:"can",g:"B",venue:"Ванкувер",host:"b",ko:"2026-06-24T19:00:00Z"},
+  {a:"bih",b:"qat",g:"B",venue:"Сиэтл",ko:"2026-06-24T19:00:00Z"},
+  {a:"sco",b:"bra",g:"C",venue:"Майами",ko:"2026-06-24T22:00:00Z"},
+  {a:"mar",b:"hai",g:"C",venue:"Атланта",ko:"2026-06-24T22:00:00Z"},
+  {a:"cze",b:"mex",g:"A",venue:"Мехико",host:"b",ko:"2026-06-25T01:00:00Z"},
+  {a:"rsa",b:"kor",g:"A",venue:"Монтеррей",ko:"2026-06-25T01:00:00Z"},
   // 25 июня
-  {a:"cuw",b:"civ",g:"E",date:"25 июня",venue:"Филадельфия"},
-  {a:"ecu",b:"ger",g:"E",date:"25 июня",venue:"Нью-Джерси"},
-  {a:"jpn",b:"swe",g:"F",date:"25 июня",venue:"Арлингтон"},
-  {a:"tun",b:"ned",g:"F",date:"25 июня",venue:"Канзас-Сити"},
-  {a:"tur",b:"usa",g:"D",date:"25 июня",venue:"Лос-Анджелес",host:"b"},
-  {a:"par",b:"aus",g:"D",date:"25 июня",venue:"Санта-Клара"},
+  {a:"cuw",b:"civ",g:"E",venue:"Филадельфия",ko:"2026-06-25T20:00:00Z"},
+  {a:"ecu",b:"ger",g:"E",venue:"Нью-Джерси",ko:"2026-06-25T20:00:00Z"},
+  {a:"jpn",b:"swe",g:"F",venue:"Арлингтон",ko:"2026-06-25T23:00:00Z"},
+  {a:"tun",b:"ned",g:"F",venue:"Канзас-Сити",ko:"2026-06-25T23:00:00Z"},
+  {a:"tur",b:"usa",g:"D",venue:"Лос-Анджелес",host:"b",ko:"2026-06-26T02:00:00Z"},
+  {a:"par",b:"aus",g:"D",venue:"Санта-Клара",ko:"2026-06-26T02:00:00Z"},
   // 26 июня
-  {a:"nor",b:"fra",g:"I",date:"26 июня",venue:"Фоксборо"},
-  {a:"sen",b:"irq",g:"I",date:"26 июня",venue:"Торонто"},
-  {a:"cpv",b:"ksa",g:"H",date:"26 июня",venue:"Хьюстон"},
-  {a:"uru",b:"esp",g:"H",date:"26 июня",venue:"Гвадалахара"},
-  {a:"egy",b:"irn",g:"G",date:"26 июня",venue:"Сиэтл"},
-  {a:"nzl",b:"bel",g:"G",date:"26 июня",venue:"Ванкувер"},
+  {a:"nor",b:"fra",g:"I",venue:"Фоксборо",ko:"2026-06-26T19:00:00Z"},
+  {a:"sen",b:"irq",g:"I",venue:"Торонто",ko:"2026-06-26T19:00:00Z"},
+  {a:"cpv",b:"ksa",g:"H",venue:"Хьюстон",ko:"2026-06-27T00:00:00Z"},
+  {a:"uru",b:"esp",g:"H",venue:"Гвадалахара",ko:"2026-06-27T00:00:00Z"},
+  {a:"egy",b:"irn",g:"G",venue:"Сиэтл",ko:"2026-06-27T03:00:00Z"},
+  {a:"nzl",b:"bel",g:"G",venue:"Ванкувер",ko:"2026-06-27T03:00:00Z"},
   // 27 июня
-  {a:"pan",b:"eng",g:"L",date:"27 июня",venue:"Нью-Джерси"},
-  {a:"cro",b:"gha",g:"L",date:"27 июня",venue:"Филадельфия"},
-  {a:"col",b:"por",g:"K",date:"27 июня",venue:"Майами"},
-  {a:"cod",b:"uzb",g:"K",date:"27 июня",venue:"Атланта"},
-  {a:"alg",b:"aut",g:"J",date:"27 июня",venue:"Канзас-Сити"},
-  {a:"jor",b:"arg",g:"J",date:"27 июня",venue:"Арлингтон"}
+  {a:"pan",b:"eng",g:"L",venue:"Нью-Джерси",ko:"2026-06-27T21:00:00Z"},
+  {a:"cro",b:"gha",g:"L",venue:"Филадельфия",ko:"2026-06-27T21:00:00Z"},
+  {a:"col",b:"por",g:"K",venue:"Майами",ko:"2026-06-27T23:30:00Z"},
+  {a:"cod",b:"uzb",g:"K",venue:"Атланта",ko:"2026-06-27T23:30:00Z"},
+  {a:"alg",b:"aut",g:"J",venue:"Канзас-Сити",ko:"2026-06-28T02:00:00Z"},
+  {a:"jor",b:"arg",g:"J",venue:"Арлингтон",ko:"2026-06-28T02:00:00Z"}
 ];
 
-// Модель исхода матча из рейтинга Эло
+/* ====== МОДЕЛЬ ПУАССОНА ======
+   Из рейтинга Эло считаем ожидаемые голы (xG) каждой команды, затем по распределению
+   Пуассона — вероятности всех счетов. Отсюда: исход (П1/Х/П2) и реалистичный счёт. */
+const _fact=[1,1,2,6,24,120,720,5040,40320,362880,3628800];
+function _pois(k,l){ return Math.exp(-l)*Math.pow(l,k)/_fact[k]; }
+const _clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+
 function predict(m){
   const A=nation(m.a), B=nation(m.b);
-  let ra=A.elo, rb=B.elo;
-  if(m.host==="a") ra+=65;            // фактор своего поля
-  if(m.host==="b") rb+=65;
-  const eA=1/(1+Math.pow(10,(rb-ra)/400));   // ожидаемый результат A (0..1)
-  let D=0.30-0.22*Math.abs(2*eA-1);          // ничья: макс в равных матчах
-  D=Math.max(0.12,Math.min(0.30,D));
-  let pa=(1-D)*eA, pb=(1-D)*(1-eA);
-  // вероятный счёт
-  const ga=Math.max(0,Math.round(0.9+1.9*eA)), gb=Math.max(0,Math.round(0.7+1.6*(1-eA)));
+  let ra=A.elo+(m.host==="a"?65:0), rb=B.elo+(m.host==="b"?65:0);
+  const diff=(ra-rb)/400;
+  // ожидаемые голы: базовый уровень ~1.32, сильнейший забивает больше и пропускает меньше
+  const lamA=_clamp(1.32*Math.exp(0.52*diff),0.25,3.9);
+  const lamB=_clamp(1.32*Math.exp(-0.52*diff),0.25,3.9);
+  const N=8; let pw=0,pd=0,pl=0; const cells=[];
+  for(let i=0;i<=N;i++){ for(let j=0;j<=N;j++){
+    const pp=_pois(i,lamA)*_pois(j,lamB);
+    if(i>j)pw+=pp; else if(i===j)pd+=pp; else pl+=pp;
+    cells.push({i,j,p:pp});
+  }}
+  const tot=pw+pd+pl; pw/=tot; pd/=tot; pl/=tot;
+  cells.sort((x,y)=>y.p-x.p);
+  const top=cells.slice(0,4).map(c=>({s:`${c.i}:${c.j}`,p:Math.round(c.p/tot*100)}));
   const r=x=>Math.round(x*100);
-  return {A,B,a:m.a,b:m.b,pa:r(pa),pd:r(D),pb:r(pb),score:`${ga}:${gb}`};
+  return {A,B,a:m.a,b:m.b,pa:r(pw),pd:r(pd),pb:r(pl),
+    score:top[0].s, topScores:top, xgA:lamA.toFixed(2), xgB:lamB.toFixed(2)};
 }
 
 function whyText(m,p){
@@ -528,18 +569,48 @@ function whyText(m,p){
   return `${fav.name} заметно сильнее по уровню и глубине; ${dog.name} остаётся надеяться на оборону и контратаки.`;
 }
 
+/* ====== СТАТУС / ВРЕМЯ / ОБНОВЛЕНИЕ ====== */
+const RESULTS={};            // `${a}|${b}` -> {ga,gb,status,minute}  (из results.json, если есть)
+let lastDataTime=null;
+const koMs=m=>new Date(m.ko).getTime();
+function statusOf(m){
+  const r=RESULTS[m.a+'|'+m.b];
+  if(r) return {k:r.status==='live'?'live':'done', real:r};
+  const ko=koMs(m), now=Date.now();
+  if(now<ko) return {k:'up'};
+  if(now<ko+135*60000) return {k:'live'};   // окно ~2ч15м = матч идёт
+  return {k:'done'};
+}
+function fmtKO(m){ return new Date(m.ko).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); }
+function countdown(m){ const d=koMs(m)-Date.now(); if(d<=0)return 'скоро';
+  const h=Math.floor(d/3600000), mi=Math.floor(d%3600000/60000);
+  if(d>86400000){ const dd=Math.floor(d/86400000); return `через ${dd} дн ${h%24} ч`; }
+  return h>0?`через ${h} ч ${mi} мин`:`через ${mi} мин`; }
+
 const matchesEl=document.getElementById('matches');
 function renderMatches(){
-  matchesEl.innerHTML=MATCHES.map((m,i)=>{
-    const p=predict(m);
-    return `<div class="mc" onclick="openMatch(${i})">
-      <div class="mtop"><span class="stg">Группа ${m.g} · групповой этап</span><span>${m.date} · ${m.venue}</span></div>
+  const ord={live:0,up:1,done:2};
+  const list=MATCHES.map((m,i)=>({m,i,st:statusOf(m)}));
+  list.sort((x,y)=> (ord[x.st.k]-ord[y.st.k]) ||
+    (x.st.k==='done' ? koMs(y.m)-koMs(x.m) : koMs(x.m)-koMs(y.m)));
+  matchesEl.innerHTML=list.map(({m,i,st})=>{
+    const p=predict(m), real=st.real;
+    let badge, scoreLine;
+    if(st.k==='live') badge=`<span class="st live">🔴 LIVE${real&&real.minute?" "+real.minute+"’":""}</span>`;
+    else if(st.k==='done') badge=`<span class="st done">✓ завершён</span>`;
+    else badge=`<span class="st up">⏳ ${countdown(m)}</span>`;
+    if(real) scoreLine=`<div class="score realscore">СЧЁТ <b>${real.ga}:${real.gb}</b> <span class="rtag ${st.k}">${st.k==='live'?'LIVE':'FT'}</span></div>`;
+    else if(st.k==='done') scoreLine=`<div class="score">прогноз был <b>${p.score}</b> <span style="color:var(--mut);font-size:11px">(реальный счёт не подключён)</span></div>`;
+    else scoreLine=`<div class="score">${st.k==='live'?'прогноз':'вероятный счёт'} <b>${p.score}</b></div>`;
+    return `<div class="mc ${st.k}" onclick="openMatch(${i})">
+      <div class="mtop"><span class="stg">Группа ${m.g}</span>${badge}</div>
+      <div class="mdate">${fmtKO(m)} · ${m.venue}</div>
       <div class="teams">
         <div class="side">${flagImg(m.a,30)}<div class="nn">${p.A.name}</div></div>
         <div class="vs">VS</div>
         <div class="side">${flagImg(m.b,30)}<div class="nn">${p.B.name}</div></div>
       </div>
-      <div class="score">вероятный счёт <b>${p.score}</b></div>
+      ${scoreLine}
       <div class="triple">
         <div class="w1" style="flex:${p.pa}">${p.pa}%</div>
         <div class="dr" style="flex:${p.pd}">${p.pd}%</div>
@@ -550,7 +621,26 @@ function renderMatches(){
       <div class="mhint">→ нажми для полного разбора</div>
     </div>`;
   }).join('');
+  const s=document.getElementById('upStamp'); if(s) s.textContent='обновлено в '+new Date().toLocaleTimeString('ru-RU');
 }
+
+/* подхват реальных результатов из results.json (необязателен; нет файла — работают прогнозы) */
+function loadResults(){
+  fetch('results.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(d=>{
+    if(d && Array.isArray(d.results)){
+      for(const k in RESULTS) delete RESULTS[k];
+      d.results.forEach(x=>{ RESULTS[x.a+'|'+x.b]={ga:x.ga,gb:x.gb,status:x.status||'finished',minute:x.minute}; });
+      lastDataTime=d.updated||null; renderMatches();
+    }
+    const e=document.getElementById('dataStamp');
+    if(e) e.textContent = lastDataTime ? ('реальные данные: '+new Date(lastDataTime).toLocaleString('ru-RU'))
+                                       : 'источник: прогноз модели (live-результаты не подключены)';
+  }).catch(()=>{ const e=document.getElementById('dataStamp'); if(e) e.textContent='источник: прогноз модели'; });
+}
+function refreshNow(){ renderMatches(); loadResults(); }
+setInterval(renderMatches, 30000);          // тик статусов/обратного отсчёта
+setInterval(loadResults, 120000);           // опрос результатов
+document.addEventListener('visibilitychange',()=>{ if(!document.hidden) refreshNow(); });
 
 /* ===== ПОЛНЫЙ РАЗБОР МАТЧА ===== */
 function isDetailed(code){ return !!TEAMS.find(t=>t.id===code); }
@@ -563,6 +653,10 @@ function openMatch(i){
   const dog = p.pa>=p.pb ? {n:B,code:m.b} : {n:A,code:m.a};
   const gap = Math.abs(A.elo-B.elo);
   const xpA=((3*p.pa+p.pd)/100).toFixed(2), xpB=((3*p.pb+p.pd)/100).toFixed(2);
+  const st=statusOf(m), real=st.real;
+  const realBanner = real
+    ? `<div class="realbanner ${st.k}">${st.k==='live'?'🔴 Идёт матч':'✓ Матч завершён'} · фактический счёт <b>${real.ga}:${real.gb}</b> <span class="rtag ${st.k}">${st.k==='live'?('LIVE'+(real.minute?' '+real.minute+"’":'')):'FT'}</span></div>`
+    : '';
 
   // сравнение силы
   const eloMax=Math.max(A.elo,B.elo);
@@ -610,11 +704,12 @@ function openMatch(i){
       <div class="mvs">${flagImg(m.a,40)}<span class="mvs-x">${A.elo>=B.elo?'⌃':''}</span></div>
       <div style="text-align:center;flex:1">
         <h2 style="font-size:20px">${A.name} <span style="color:var(--mut)">—</span> ${B.name}</h2>
-        <div class="tgroup">Группа ${m.g} · ${m.date} · ${m.venue}</div>
+        <div class="tgroup">Группа ${m.g} · ${fmtKO(m)} · ${m.venue}</div>
       </div>
       <div class="mvs">${flagImg(m.b,40)}</div>
       <button class="close" onclick="closeOv()">×</button>
     </div>
+    ${realBanner}
 
     <div class="secT">📊 Прогноз исхода</div>
     <div class="triple" style="height:38px;font-size:13px">
@@ -623,7 +718,10 @@ function openMatch(i){
       <div class="w2" style="flex:${p.pb}">${p.pb}%</div>
     </div>
     <div class="tlabels"><span>П1 ${A.name}</span><span>ничья</span><span>П2 ${B.name}</span></div>
-    <div class="score" style="margin-top:12px;text-align:center">вероятный счёт <b>${p.score}</b> · ожидаемые очки <b style="color:var(--txt)">${A.name} ${xpA}</b> / <b style="color:var(--txt)">${B.name} ${xpB}</b></div>
+    <div class="score" style="margin-top:12px;text-align:center">ожидаемые голы (xG): <b style="color:var(--txt)">${A.name} ${p.xgA}</b> — <b style="color:var(--txt)">${p.xgB} ${B.name}</b> · ожидаемые очки ${xpA} / ${xpB}</div>
+
+    <div class="secT">🎯 Наиболее вероятные счета</div>
+    <div class="scorelist">${p.topScores.map((s,k)=>`<span class="sl${k===0?' top':''}"><b>${s.s}</b><span>${s.p}%</span></span>`).join('')}</div>
 
     <div class="secT">⚖️ Сравнение сил</div>
     ${cmp}
@@ -754,7 +852,7 @@ document.getElementById('filters').addEventListener('click',e=>{
 });
 document.getElementById('search').addEventListener('input',e=>{q=e.target.value.toLowerCase().trim();renderGrid();});
 
-renderPodium(); renderMatches(); renderGrid();
+renderPodium(); renderMatches(); renderGrid(); loadResults();
 </script>
 </body>
 </html>
