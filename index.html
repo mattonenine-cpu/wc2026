@@ -600,8 +600,7 @@ function renderMatches(){
     else if(st.k==='done') badge=`<span class="st done">✓ завершён</span>`;
     else badge=`<span class="st up">⏳ ${countdown(m)}</span>`;
     if(real) scoreLine=`<div class="score realscore">СЧЁТ <b>${real.ga}:${real.gb}</b> <span class="rtag ${st.k}">${st.k==='live'?'LIVE':'FT'}</span></div>`;
-    else if(st.k==='done') scoreLine=`<div class="score">прогноз был <b>${p.score}</b> <span style="color:var(--mut);font-size:11px">(реальный счёт не подключён)</span></div>`;
-    else scoreLine=`<div class="score">${st.k==='live'?'прогноз':'вероятный счёт'} <b>${p.score}</b></div>`;
+    else scoreLine=`<div class="score">ожидаемые голы (xG) <b>${p.xgA}</b> : <b>${p.xgB}</b></div>`;
     return `<div class="mc ${st.k}" onclick="openMatch(${i})">
       <div class="mtop"><span class="stg">Группа ${m.g}</span>${badge}</div>
       <div class="mdate">${fmtKO(m)} · ${m.venue}</div>
@@ -696,8 +695,8 @@ function openMatch(i){
   factors.push(`Ожидаемые очки в этом туре: ${A.name} — ${xpA}, ${B.name} — ${xpB} (из 3).`);
 
   const verdict = gap<45
-    ? `Модель не выделяет явного фаворита. Наиболее вероятен близкий, равный матч; ничья — реальный исход. Расчётный счёт ${p.score}.`
-    : `Модель отдаёт предпочтение ${fav.n.name} (${fav.pw}% на победу). ${dog.n.name} способны зацепиться за счёт дисциплины и контратак, но для этого нужен почти идеальный матч. Расчётный счёт ${p.score}.`;
+    ? `Модель не выделяет явного фаворита. Наиболее вероятен близкий, равный матч; ничья — реальный исход. Ожидаемые голы: ${A.name} ${p.xgA}, ${B.name} ${p.xgB}.`
+    : `Модель отдаёт предпочтение ${fav.n.name} (${fav.pw}% на победу). ${dog.n.name} способны зацепиться за счёт дисциплины и контратак, но для этого нужен почти идеальный матч. Ожидаемые голы: ${A.name} ${p.xgA}, ${B.name} ${p.xgB}.`;
 
   document.getElementById('modal').innerHTML=`
     <div class="mhead">
@@ -719,9 +718,6 @@ function openMatch(i){
     </div>
     <div class="tlabels"><span>П1 ${A.name}</span><span>ничья</span><span>П2 ${B.name}</span></div>
     <div class="score" style="margin-top:12px;text-align:center">ожидаемые голы (xG): <b style="color:var(--txt)">${A.name} ${p.xgA}</b> — <b style="color:var(--txt)">${p.xgB} ${B.name}</b> · ожидаемые очки ${xpA} / ${xpB}</div>
-
-    <div class="secT">🎯 Наиболее вероятные счета</div>
-    <div class="scorelist">${p.topScores.map((s,k)=>`<span class="sl${k===0?' top':''}"><b>${s.s}</b><span>${s.p}%</span></span>`).join('')}</div>
 
     <div class="secT">⚖️ Сравнение сил</div>
     ${cmp}
